@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ElevateX 4.0 — IEEE JUSB</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+ 
+  :root {
+    --blue: #00D4FF;
+    --gold: #FFB800;
+    --red: #FF2D55;
+    --white: #FFFFFF;
+    --dark: #020408;
+    --darker: #010204;
+    --panel: rgba(0,212,255,0.05);
+    --glow-blue: 0 0 20px rgba(0,212,255,0.6), 0 0 60px rgba(0,212,255,0.2);
+    --glow-gold: 0 0 20px rgba(255,184,0,0.7), 0 0 60px rgba(255,184,0,0.2);
+  }
+ 
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--dark); font-family: 'Rajdhani', sans-serif; cursor: none; }
+ 
+  #cursor { position: fixed; width: 10px; height: 10px; background: var(--blue); border-radius: 50%; pointer-events: none; z-index: 9999; transform: translate(-50%,-50%); transition: transform 0.1s; mix-blend-mode: screen; }
+  #cursor-ring { position: fixed; width: 36px; height: 36px; border: 1px solid rgba(0,212,255,0.4); border-radius: 50%; pointer-events: none; z-index: 9998; transform: translate(-50%,-50%); }
+ 
+  #canvas { position: fixed; inset: 0; z-index: 0; }
+ 
+  #scene { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+ 
+  /* ─── INTRO SCREEN ─── */
+  #intro { position: fixed; inset: 0; z-index: 100; background: var(--dark); display: flex; align-items: center; justify-content: center; flex-direction: column; }
+  .ieee-badge { font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.4em; color: var(--blue); opacity: 0; animation: fadeUp 0.8s 0.3s forwards; border: 1px solid rgba(0,212,255,0.3); padding: 6px 20px; }
+  .ieee-badge span { color: var(--gold); }
+  #intro-line { width: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--blue), transparent); margin: 28px 0; animation: expandLine 0.8s 0.9s forwards; }
+  #intro-logo { font-family: 'Bebas Neue', sans-serif; font-size: clamp(72px, 12vw, 140px); letter-spacing: 0.06em; color: transparent; -webkit-text-stroke: 1px rgba(255,255,255,0.15); opacity: 0; animation: fadeUp 0.6s 1.2s forwards; position: relative; }
+  #intro-logo .x { color: var(--blue); -webkit-text-stroke: 0; filter: drop-shadow(0 0 30px var(--blue)); }
+  .version-tag { font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 0.5em; color: rgba(255,255,255,0.3); opacity: 0; animation: fadeUp 0.6s 1.6s forwards; }
+  #intro-skip { position: absolute; bottom: 40px; right: 40px; font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 0.3em; color: rgba(255,255,255,0.2); cursor: pointer; opacity: 0; animation: fadeIn 0.6s 2s forwards; }
+  #intro-skip:hover { color: var(--blue); }
+  #intro-cta { margin-top: 48px; opacity: 0; animation: fadeUp 0.6s 2s forwards; }
+  #intro-cta button { font-family: 'Rajdhani', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: 0.3em; background: transparent; border: 1px solid var(--blue); color: var(--blue); padding: 14px 48px; cursor: pointer; transition: all 0.3s; text-transform: uppercase; }
+  #intro-cta button:hover { background: var(--blue); color: var(--dark); box-shadow: var(--glow-blue); }
+  #intro-cta button:active { transform: scale(0.96); }
+ 
+  /* ─── MAIN TRAILER ─── */
+  #trailer { display: none; position: fixed; inset: 0; z-index: 50; overflow: hidden; }
+ 
+  /* scanlines overlay */
+  #trailer::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(0,0,0,0.05) 0px, rgba(0,0,0,0.05) 1px, transparent 1px, transparent 3px); pointer-events: none; z-index: 200; }
+ 
+  /* corner brackets */
+  .corner { position: absolute; width: 60px; height: 60px; z-index: 150; }
+  .corner.tl { top: 24px; left: 24px; border-top: 1px solid rgba(0,212,255,0.5); border-left: 1px solid rgba(0,212,255,0.5); }
+  .corner.tr { top: 24px; right: 24px; border-top: 1px solid rgba(0,212,255,0.5); border-right: 1px solid rgba(0,212,255,0.5); }
+  .corner.bl { bottom: 24px; left: 24px; border-bottom: 1px solid rgba(0,212,255,0.5); border-left: 1px solid rgba(0,212,255,0.5); }
+  .corner.br { bottom: 24px; right: 24px; border-bottom: 1px solid rgba(0,212,255,0.5); border-right: 1px solid rgba(0,212,255,0.5); }
+ 
+  /* HUD elements */
+  .hud-line { position: absolute; font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 0.3em; color: rgba(0,212,255,0.3); z-index: 150; }
+  .hud-line.tl { top: 30px; left: 96px; }
+  .hud-line.tr { top: 30px; right: 96px; text-align: right; }
+  .hud-line.bl { bottom: 30px; left: 96px; }
+  .hud-line.br { bottom: 30px; right: 96px; text-align: right; }
+ 
+  /* ─── SLIDES ─── */
+  .slide { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.05s; }
+  .slide.active { opacity: 1; pointer-events: all; }
+ 
+  /* Slide 1: Main Title */
+  #s1 { flex-direction: column; text-align: center; }
+  .tag-line { font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.5em; color: var(--blue); margin-bottom: 24px; opacity: 0; transform: translateY(20px); }
+  .main-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(80px, 14vw, 180px); letter-spacing: 0.04em; line-height: 0.9; color: white; position: relative; }
+  .main-title .word { display: block; overflow: hidden; }
+  .main-title .word span { display: block; transform: translateY(110%); }
+  .main-title .elevate { color: white; }
+  .main-title .ex { color: var(--blue); text-shadow: var(--glow-blue); }
+  .version-num { font-family: 'Space Mono', monospace; font-size: 13px; letter-spacing: 0.4em; color: rgba(255,255,255,0.3); margin-top: 24px; opacity: 0; }
+  .sub-copy { font-family: 'Rajdhani', sans-serif; font-size: 20px; font-weight: 300; letter-spacing: 0.2em; color: rgba(255,255,255,0.5); margin-top: 16px; opacity: 0; text-transform: uppercase; }
+ 
+  /* Slide 2: "4 TRACKS" */
+  #s2 { flex-direction: column; align-items: center; justify-content: center; gap: 0; }
+  .s2-header { font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 0.6em; color: var(--gold); margin-bottom: 20px; opacity: 0; }
+  .big-number { font-family: 'Bebas Neue', sans-serif; font-size: clamp(120px, 22vw, 280px); color: transparent; -webkit-text-stroke: 1px rgba(255,255,255,0.08); line-height: 1; opacity: 0; position: relative; }
+  .big-number-fill { position: absolute; inset: 0; font-family: 'Bebas Neue', sans-serif; font-size: clamp(120px, 22vw, 280px); color: white; line-height: 1; clip-path: inset(100% 0 0 0); transition: clip-path 0.8s cubic-bezier(0.16,1,0.3,1); }
+  .tracks-word { font-family: 'Bebas Neue', sans-serif; font-size: clamp(28px, 5vw, 56px); letter-spacing: 0.4em; color: var(--gold); opacity: 0; margin-top: -10px; }
+  .s2-desc { font-family: 'Rajdhani', sans-serif; font-size: 15px; letter-spacing: 0.15em; color: rgba(255,255,255,0.3); margin-top: 20px; opacity: 0; text-transform: uppercase; }
+ 
+  /* Slide 3: Track Cards */
+  #s3 { flex-direction: column; align-items: center; justify-content: center; }
+  .tracks-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; max-width: 860px; width: 90vw; }
+  .track-card { background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.06); padding: 28px 32px; position: relative; overflow: hidden; opacity: 0; transform: translateY(30px) scale(0.96); transition: all 0.4s; cursor: default; }
+  .track-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; transform: scaleX(0); transform-origin: left; transition: transform 0.5s 0.2s; }
+  .track-card.research::before { background: var(--blue); }
+  .track-card.industry::before { background: var(--gold); }
+  .track-card.coding::before { background: var(--red); }
+  .track-card.soft::before { background: #00FF88; }
+  .track-card.visible::before { transform: scaleX(1); }
+  .track-card::after { content: ''; position: absolute; inset: 0; opacity: 0; transition: opacity 0.4s; }
+  .track-card.research::after { background: radial-gradient(ellipse at top left, rgba(0,212,255,0.08), transparent 70%); }
+  .track-card.industry::after { background: radial-gradient(ellipse at top left, rgba(255,184,0,0.08), transparent 70%); }
+  .track-card.coding::after { background: radial-gradient(ellipse at top left, rgba(255,45,85,0.08), transparent 70%); }
+  .track-card.soft::after { background: radial-gradient(ellipse at top left, rgba(0,255,136,0.08), transparent 70%); }
+  .track-card.visible::after { opacity: 1; }
+  .track-icon { font-size: 28px; margin-bottom: 12px; display: block; }
+  .track-num { font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 0.4em; color: rgba(255,255,255,0.2); margin-bottom: 10px; }
+  .track-name { font-family: 'Bebas Neue', sans-serif; font-size: 30px; letter-spacing: 0.06em; margin-bottom: 8px; }
+  .track-card.research .track-name { color: var(--blue); }
+  .track-card.industry .track-name { color: var(--gold); }
+  .track-card.coding .track-name { color: var(--red); }
+  .track-card.soft .track-name { color: #00FF88; }
+  .track-desc { font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 400; color: rgba(255,255,255,0.4); letter-spacing: 0.08em; line-height: 1.6; text-transform: uppercase; }
+  .track-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+  .tag { font-family: 'Space Mono', monospace; font-size: 8px; letter-spacing: 0.2em; border: 1px solid rgba(255,255,255,0.1); padding: 4px 10px; color: rgba(255,255,255,0.3); }
+ 
+  /* Slide 4: Stats */
+  #s4 { flex-direction: column; align-items: center; text-align: center; }
+  .s4-label { font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 0.6em; color: var(--blue); margin-bottom: 40px; opacity: 0; }
+  .stats-row { display: flex; gap: 60px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+  .stat-item { opacity: 0; transform: translateY(20px); text-align: center; }
+  .stat-num { font-family: 'Bebas Neue', sans-serif; font-size: clamp(56px, 8vw, 88px); color: white; line-height: 1; }
+  .stat-num .accent { color: var(--blue); }
+  .stat-unit { font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 0.4em; color: rgba(255,255,255,0.3); margin-top: 6px; text-transform: uppercase; }
+  .stat-divider { width: 1px; background: rgba(255,255,255,0.08); align-self: stretch; }
+ 
+  /* Slide 5: CTA finale */
+  #s5 { flex-direction: column; text-align: center; }
+  .finale-pre { font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 0.6em; color: rgba(255,255,255,0.2); margin-bottom: 20px; opacity: 0; }
+  .finale-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(48px, 8vw, 96px); letter-spacing: 0.04em; color: white; line-height: 1; opacity: 0; }
+  .finale-title .highlight { color: var(--blue); text-shadow: var(--glow-blue); }
+  .finale-tagline { font-family: 'Rajdhani', sans-serif; font-size: 18px; font-weight: 300; letter-spacing: 0.3em; color: rgba(255,255,255,0.4); margin-top: 20px; opacity: 0; text-transform: uppercase; }
+  .finale-ieee { font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.4em; color: var(--gold); margin-top: 32px; opacity: 0; border: 1px solid rgba(255,184,0,0.2); padding: 8px 24px; display: inline-block; }
+  .finale-ieee span { color: white; opacity: 0.4; }
+ 
+  /* progress bar */
+  #progress-bar { position: absolute; bottom: 0; left: 0; height: 2px; background: var(--blue); width: 0%; z-index: 200; transition: width 0.1s linear; box-shadow: var(--glow-blue); }
+ 
+  /* nav dots */
+  #nav-dots { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 200; }
+  .nav-dot { width: 4px; height: 4px; border-radius: 50%; background: rgba(255,255,255,0.15); transition: all 0.3s; }
+  .nav-dot.active { background: var(--blue); width: 20px; border-radius: 2px; box-shadow: var(--glow-blue); }
+ 
+  /* glitch effect */
+  @keyframes glitch1 { 0%,100%{clip-path:inset(0 0 100% 0)} 10%{clip-path:inset(20% 0 60% 0); transform:translate(-4px,0)} 20%{clip-path:inset(70% 0 10% 0); transform:translate(4px,0)} 30%{clip-path:inset(0 0 100% 0)} }
+  @keyframes glitch2 { 0%,100%{clip-path:inset(0 0 100% 0)} 15%{clip-path:inset(40% 0 30% 0); transform:translate(6px,0)} 25%{clip-path:inset(10% 0 80% 0); transform:translate(-6px,0)} 35%{clip-path:inset(0 0 100% 0)} }
+  .glitch-wrap { position: relative; display: inline-block; }
+  .glitch-wrap::before, .glitch-wrap::after { content: attr(data-text); position: absolute; inset: 0; font-family: inherit; font-size: inherit; }
+  .glitch-wrap::before { color: var(--red); animation: glitch1 4s infinite 1s; }
+  .glitch-wrap::after { color: var(--blue); animation: glitch2 4s infinite 1.5s; }
+ 
+  @keyframes fadeUp { from { opacity:0; transform: translateY(20px); } to { opacity:1; transform: translateY(0); } }
+  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+  @keyframes expandLine { from { width:0; } to { width: min(300px, 60vw); } }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  @keyframes scanMove { from{transform:translateY(-100%)} to{transform:translateY(100vh)} }
+  @keyframes flicker { 0%,100%{opacity:1}45%{opacity:1}50%{opacity:0.7}55%{opacity:1}80%{opacity:0.9}85%{opacity:1} }
+ 
+  #scan-line { position: absolute; width: 100%; height: 3px; background: linear-gradient(0deg, transparent, rgba(0,212,255,0.15), transparent); z-index: 180; animation: scanMove 8s linear infinite; pointer-events: none; }
+ 
+  /* energy pulse ring */
+  .pulse-ring { position: absolute; border-radius: 50%; border: 1px solid rgba(0,212,255,0.1); animation: ringExpand 3s ease-out infinite; }
+  @keyframes ringExpand { 0%{transform:scale(0.4);opacity:0.8} 100%{transform:scale(2);opacity:0} }
+ 
+  /* ─── ANIMATIONS ─── */
+  .anim-text { opacity: 0; transform: translateY(100%); transition: all 0.7s cubic-bezier(0.16,1,0.3,1); }
+  .anim-text.in { opacity: 1; transform: none; }
+  .anim-fade { opacity: 0; transition: opacity 0.6s ease; }
+  .anim-fade.in { opacity: 1; }
+ 
+  /* replay button */
+  #replay-btn { position: absolute; bottom: 60px; right: 40px; font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 0.3em; color: rgba(255,255,255,0.2); cursor: pointer; border: 1px solid rgba(255,255,255,0.1); padding: 8px 16px; z-index: 200; display: none; }
+  #replay-btn:hover { color: var(--blue); border-color: var(--blue); }
+ 
+  /* energy meter */
+  .energy-bar { position: absolute; left: 30px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column-reverse; gap: 3px; z-index: 150; }
+  .energy-seg { width: 3px; height: 10px; background: rgba(0,212,255,0.15); transition: background 0.1s; }
+  .energy-seg.lit { background: var(--blue); box-shadow: 0 0 8px var(--blue); }
+  .energy-seg.lit.gold { background: var(--gold); box-shadow: 0 0 8px var(--gold); }
+ 
+  .countdown-ring { position: absolute; top: 30px; right: 80px; width: 44px; height: 44px; z-index: 150; }
+  .countdown-ring svg { transform: rotate(-90deg); }
+  .countdown-ring circle { fill: none; stroke: rgba(0,212,255,0.15); stroke-width: 2; }
+  .countdown-ring circle.progress { stroke: var(--blue); stroke-dasharray: 113; stroke-dashoffset: 113; transition: stroke-dashoffset 0.1s linear; }
+  .countdown-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: 'Space Mono', monospace; font-size: 11px; color: var(--blue); }
+ 
+  @media (max-width: 600px) {
+    .tracks-grid { grid-template-columns: 1fr; max-width: 360px; }
+    .stats-row { gap: 30px; }
+    .main-title { font-size: 18vw; }
+  }
+</style>
+</head>
+<body>
+ 
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+<canvas id="canvas"></canvas>
+ 
+<!-- INTRO SCREEN -->
+<div id="intro">
+  <div class="ieee-badge">IEEE · <span>JUSB</span> · PRESENTS</div>
+  <div id="intro-line"></div>
+  <div id="intro-logo"><span class="glitch-wrap" data-text="ELEVATE">ELEVATE</span><span class="x">X</span></div>
+  <div class="version-tag">VERSION 4.0 · THE ULTIMATE MENTORING SUMMIT</div>
+  <div id="intro-cta"><button onclick="startTrailer()">ENTER THE SUMMIT ›</button></div>
+  <div id="intro-skip" onclick="startTrailer()">SKIP INTRO ↗</div>
+</div>
+ 
+<!-- MAIN TRAILER -->
+<div id="trailer">
+  <div id="scan-line"></div>
+  <div class="corner tl"></div>
+  <div class="corner tr"></div>
+  <div class="corner bl"></div>
+  <div class="corner br"></div>
+  <div class="hud-line tl">ELX.4.0 // INIT</div>
+  <div class="hud-line tr" id="hud-time">00:00:00</div>
+  <div class="hud-line bl">IEEE STUDENTS BRANCH</div>
+  <div class="hud-line br">SIGNAL: STABLE</div>
+ 
+  <!-- energy meter -->
+  <div class="energy-bar" id="energy-bar"></div>
+ 
+  <!-- countdown ring -->
+  <div class="countdown-ring">
+    <svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="18"/><circle cx="18" cy="18" r="18" class="progress" id="ring-progress"/></svg>
+    <div class="countdown-num" id="ring-num">5</div>
+  </div>
+ 
+  <!-- SLIDE 1: Main Title -->
+  <div class="slide active" id="s1">
+    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;">
+      <div style="position:absolute;width:500px;height:500px;border-radius:50%;border:1px solid rgba(0,212,255,0.04);top:50%;left:50%;transform:translate(-50%,-50%);"></div>
+      <div class="pulse-ring" style="width:300px;height:300px;top:50%;left:50%;transform:translate(-50%,-50%);animation-delay:0s;"></div>
+      <div class="pulse-ring" style="width:300px;height:300px;top:50%;left:50%;transform:translate(-50%,-50%);animation-delay:1s;"></div>
+      <div class="pulse-ring" style="width:300px;height:300px;top:50%;left:50%;transform:translate(-50%,-50%);animation-delay:2s;"></div>
+ 
+      <div class="tag-line" id="s1-tag">THE ULTIMATE MENTORING SUMMIT</div>
+      <div class="main-title">
+        <div class="word elevate"><span id="s1-elevate">ELEVATE</span></div>
+        <div class="word ex"><span id="s1-x"><span class="glitch-wrap" data-text="X">X</span> 4.0</span></div>
+      </div>
+      <div class="version-num" id="s1-version">IEEE JUSB · SEASON 4</div>
+      <div class="sub-copy" id="s1-sub">Level up. Break limits. Build legacy.</div>
+    </div>
+  </div>
+ 
+  <!-- SLIDE 2: 4 TRACKS -->
+  <div class="slide" id="s2">
+    <div style="text-align:center;position:relative;z-index:10;">
+      <div class="s2-header" id="s2-header">INTRODUCING</div>
+      <div class="big-number" id="s2-num" style="position:relative;display:inline-block;">
+        4
+        <div class="big-number-fill" id="s2-fill">4</div>
+      </div>
+      <div class="tracks-word" id="s2-tracks">SPECIALIZED TRACKS</div>
+      <div class="s2-desc" id="s2-desc">One summit. Four paths. Infinite potential.</div>
+    </div>
+  </div>
+ 
+  <!-- SLIDE 3: Track Cards -->
+  <div class="slide" id="s3">
+    <div style="width:100%;display:flex;flex-direction:column;align-items:center;padding:20px;">
+      <div style="font-family:'Space Mono',monospace;font-size:9px;letter-spacing:0.5em;color:rgba(255,255,255,0.2);margin-bottom:24px;">CHOOSE YOUR PATH</div>
+      <div class="tracks-grid">
+        <div class="track-card research" id="tc1">
+          <div class="track-num">TRACK 01</div>
+          <div class="track-name">Research</div>
+          <div class="track-desc">Deep-dive into cutting-edge domains. From papers to prototypes.</div>
+          <div class="track-tags">
+            <span class="tag">Publications</span>
+            <span class="tag">Webinars</span>
+            <span class="tag">IEEE Standards</span>
+          </div>
+        </div>
+        <div class="track-card industry" id="tc2">
+          <div class="track-num">TRACK 02</div>
+          <div class="track-name">Industry</div>
+          <div class="track-desc">Real-world insights from professionals at the top of their field.</div>
+          <div class="track-tags">
+            <span class="tag">Case Studies</span>
+            <span class="tag">Expert Talks</span>
+            <span class="tag">Networking</span>
+          </div>
+        </div>
+        <div class="track-card coding" id="tc3">
+          <div class="track-num">TRACK 03</div>
+          <div class="track-name">Competitive Coding</div>
+          <div class="track-desc">Rapid-fire contests, DSA mastery, and algorithmic warfare.</div>
+          <div class="track-tags">
+            <span class="tag">Contests</span>
+            <span class="tag">DSA</span>
+            <span class="tag">Hackathons</span>
+          </div>
+        </div>
+        <div class="track-card soft" id="tc4">
+          <div class="track-num">TRACK 04</div>
+          <div class="track-name">Soft Skills</div>
+          <div class="track-desc">Communication, leadership, and presence that commands rooms.</div>
+          <div class="track-tags">
+            <span class="tag">Debates</span>
+            <span class="tag">Leadership</span>
+            <span class="tag">Public Speaking</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+ 
+  <!-- SLIDE 4: Stats -->
+  <div class="slide" id="s4">
+    <div style="text-align:center;width:100%;padding:40px 20px;">
+      <div class="s4-label" id="s4-label">BY THE NUMBERS</div>
+      <div class="stats-row">
+        <div class="stat-item" id="stat1">
+          <div class="stat-num"><span class="count" data-target="100">0</span><span class="accent">+</span></div>
+          <div class="stat-unit">Expert Mentors</div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item" id="stat2">
+          <div class="stat-num"><span class="count" data-target="4">0</span></div>
+          <div class="stat-unit">Specialized Tracks</div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item" id="stat3">
+          <div class="stat-num"><span class="count" data-target="6">0</span><span class="accent">wk</span></div>
+          <div class="stat-unit">Intensive Program</div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item" id="stat4">
+          <div class="stat-num"><span class="count" data-target="500">0</span><span class="accent">+</span></div>
+          <div class="stat-unit">Alumni Community</div>
+        </div>
+      </div>
+      <div style="margin-top:48px;font-family:'Rajdhani',sans-serif;font-size:15px;letter-spacing:0.2em;color:rgba(255,255,255,0.2);opacity:0;text-transform:uppercase;" id="s4-quote">
+        "Where engineers become leaders."
+      </div>
+    </div>
+  </div>
+ 
+  <!-- SLIDE 5: Finale CTA -->
+  <div class="slide" id="s5">
+    <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:0;">
+      <div class="finale-pre" id="fin-pre">IEEE JUSB · 2025</div>
+      <div class="finale-title" id="fin-title">
+        ARE YOU READY TO<br>
+        <span class="highlight">ELEVATE</span>?
+      </div>
+      <div class="finale-tagline" id="fin-tag">Join the summit that defines careers.</div>
+      <div class="finale-ieee" id="fin-ieee">ElevateX <span>4.0</span> · <span>IEEE JUSB</span></div>
+      <div style="margin-top:40px;opacity:0;" id="fin-btns">
+        <button onclick="replay()" style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;letter-spacing:0.3em;background:transparent;border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.4);padding:12px 32px;cursor:pointer;margin-right:16px;transition:all 0.3s;text-transform:uppercase;">↺ REPLAY</button>
+        <button style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;letter-spacing:0.3em;background:var(--blue);border:1px solid var(--blue);color:var(--dark);padding:12px 40px;cursor:pointer;transition:all 0.3s;text-transform:uppercase;">REGISTER NOW →</button>
+      </div>
+    </div>
+  </div>
+ 
+  <div id="progress-bar"></div>
+  <div id="nav-dots">
+    <div class="nav-dot active"></div>
+    <div class="nav-dot"></div>
+    <div class="nav-dot"></div>
+    <div class="nav-dot"></div>
+    <div class="nav-dot"></div>
+  </div>
+</div>
+ 
+<script>
+// ─── PARTICLE SYSTEM ───
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let W, H, particles = [], lines = [];
+ 
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+ 
+class Particle {
+  constructor() { this.reset(); }
+  reset() {
+    this.x = Math.random() * W;
+    this.y = Math.random() * H;
+    this.vx = (Math.random() - 0.5) * 0.4;
+    this.vy = (Math.random() - 0.5) * 0.4;
+    this.size = Math.random() * 1.5 + 0.3;
+    this.opacity = Math.random() * 0.5 + 0.1;
+    this.hue = Math.random() > 0.8 ? 'gold' : 'blue';
+    this.pulse = Math.random() * Math.PI * 2;
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.pulse += 0.02;
+    if (this.x < 0 || this.x > W || this.y < 0 || this.y > H) this.reset();
+  }
+  draw() {
+    const op = this.opacity * (0.7 + 0.3 * Math.sin(this.pulse));
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fillStyle = this.hue === 'gold' ? `rgba(255,184,0,${op})` : `rgba(0,212,255,${op})`;
+    ctx.fill();
+  }
+}
+ 
+for (let i = 0; i < 120; i++) particles.push(new Particle());
+ 
+let raf;
+function animParticles() {
+  ctx.clearRect(0, 0, W, H);
+  particles.forEach(p => { p.update(); p.draw(); });
+ 
+  // draw connection lines
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i + 1; j < particles.length; j++) {
+      const dx = particles[i].x - particles[j].x;
+      const dy = particles[i].y - particles[j].y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < 100) {
+        ctx.beginPath();
+        ctx.moveTo(particles[i].x, particles[i].y);
+        ctx.lineTo(particles[j].x, particles[j].y);
+        ctx.strokeStyle = `rgba(0,212,255,${0.04 * (1 - dist/100)})`;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+    }
+  }
+  raf = requestAnimationFrame(animParticles);
+}
+animParticles();
+ 
+// ─── CURSOR ───
+const cursor = document.getElementById('cursor');
+const ring = document.getElementById('cursor-ring');
+document.addEventListener('mousemove', e => {
+  cursor.style.left = e.clientX + 'px';
+  cursor.style.top = e.clientY + 'px';
+  ring.style.left = e.clientX + 'px';
+  ring.style.top = e.clientY + 'px';
+});
+ 
+// ─── ENERGY BAR ───
+const energyBar = document.getElementById('energy-bar');
+for (let i = 0; i < 20; i++) {
+  const seg = document.createElement('div');
+  seg.className = 'energy-seg';
+  energyBar.appendChild(seg);
+}
+ 
+function setEnergy(level) {
+  const segs = energyBar.querySelectorAll('.energy-seg');
+  segs.forEach((s, i) => {
+    s.classList.remove('lit', 'gold');
+    if (i < level) {
+      s.classList.add('lit');
+      if (i >= 15) s.classList.add('gold');
+    }
+  });
+}
+ 
+// ─── HUD CLOCK ───
+let hudInterval;
+function startHUD() {
+  const start = Date.now();
+  hudInterval = setInterval(() => {
+    const ms = Date.now() - start;
+    const s = Math.floor(ms / 1000) % 60;
+    const m = Math.floor(ms / 60000) % 60;
+    const h = Math.floor(ms / 3600000);
+    document.getElementById('hud-time').textContent =
+      String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  }, 1000);
+}
+ 
+// ─── SLIDE ENGINE ───
+const SLIDES = ['s1','s2','s3','s4','s5'];
+const DURATIONS = [5000, 4000, 6000, 5500, 99999];
+let currentSlide = -1;
+let slideTimer = null;
+let progressTimer = null;
+let totalDuration = 0;
+const fullDuration = DURATIONS.slice(0,-1).reduce((a,b)=>a+b,0);
+ 
+function goSlide(idx) {
+  if (idx >= SLIDES.length) return;
+  SLIDES.forEach((id, i) => {
+    document.getElementById(id).classList.toggle('active', i === idx);
+  });
+  document.querySelectorAll('.nav-dot').forEach((d,i) => d.classList.toggle('active', i===idx));
+  currentSlide = idx;
+  runSlideAnim(idx);
+  setEnergy(Math.round((idx / (SLIDES.length-1)) * 20));
+  if (slideTimer) clearTimeout(slideTimer);
+  if (progressTimer) clearInterval(progressTimer);
+  if (idx < SLIDES.length - 1) {
+    const dur = DURATIONS[idx];
+    let elapsed = 0;
+    progressTimer = setInterval(() => {
+      elapsed += 100;
+      const pct = (totalDuration + elapsed) / fullDuration * 100;
+      document.getElementById('progress-bar').style.width = Math.min(pct, 100) + '%';
+ 
+      // ring
+      const ringPct = elapsed / dur;
+      const offset = 113 - 113 * ringPct;
+      document.getElementById('ring-progress').style.strokeDashoffset = offset;
+      document.getElementById('ring-num').textContent = Math.ceil((dur - elapsed) / 1000);
+ 
+      if (elapsed >= dur) clearInterval(progressTimer);
+    }, 100);
+ 
+    slideTimer = setTimeout(() => {
+      totalDuration += dur;
+      goSlide(idx + 1);
+    }, dur);
+  }
+}
+ 
+// ─── SLIDE ANIMATIONS ───
+function runSlideAnim(idx) {
+  if (idx === 0) animSlide1();
+  if (idx === 1) animSlide2();
+  if (idx === 2) animSlide3();
+  if (idx === 3) animSlide4();
+  if (idx === 4) animSlide5();
+}
+ 
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+ 
+async function animSlide1() {
+  const tag = document.getElementById('s1-tag');
+  const elev = document.getElementById('s1-elevate');
+  const x = document.getElementById('s1-x');
+  const ver = document.getElementById('s1-version');
+  const sub = document.getElementById('s1-sub');
+ 
+  // reset
+  [tag, ver, sub].forEach(el => { el.style.opacity = 0; el.style.transform = 'translateY(20px)'; });
+  [elev, x].forEach(el => { el.style.transform = 'translateY(110%)'; });
+ 
+  await delay(200);
+  tag.style.transition = 'all 0.6s ease'; tag.style.opacity = 1; tag.style.transform = 'none';
+  await delay(400);
+  elev.style.transition = 'transform 0.7s cubic-bezier(0.16,1,0.3,1)'; elev.style.transform = 'none';
+  await delay(200);
+  x.style.transition = 'transform 0.7s cubic-bezier(0.16,1,0.3,1)'; x.style.transform = 'none';
+  await delay(400);
+  ver.style.transition = 'all 0.6s ease'; ver.style.opacity = 1; ver.style.transform = 'none';
+  await delay(300);
+  sub.style.transition = 'all 0.6s ease'; sub.style.opacity = 0.6; sub.style.transform = 'none';
+}
+ 
+async function animSlide2() {
+  const header = document.getElementById('s2-header');
+  const num = document.getElementById('s2-num');
+  const fill = document.getElementById('s2-fill');
+  const tracks = document.getElementById('s2-tracks');
+  const desc = document.getElementById('s2-desc');
+ 
+  [header, num, tracks, desc].forEach(el => { el.style.opacity = 0; el.style.transform = 'translateY(20px)'; });
+  fill.style.clipPath = 'inset(100% 0 0 0)';
+ 
+  await delay(200);
+  header.style.transition = 'all 0.5s'; header.style.opacity = 1; header.style.transform = 'none';
+  await delay(300);
+  num.style.transition = 'all 0.5s'; num.style.opacity = 1; num.style.transform = 'none';
+  await delay(400);
+  fill.style.transition = 'clip-path 0.8s cubic-bezier(0.16,1,0.3,1)';
+  fill.style.clipPath = 'inset(0% 0 0 0)';
+  await delay(600);
+  tracks.style.transition = 'all 0.6s'; tracks.style.opacity = 1; tracks.style.transform = 'none';
+  await delay(300);
+  desc.style.transition = 'all 0.6s'; desc.style.opacity = 0.6; desc.style.transform = 'none';
+}
+ 
+async function animSlide3() {
+  const cards = ['tc1','tc2','tc3','tc4'];
+  cards.forEach(id => {
+    const el = document.getElementById(id);
+    el.style.opacity = 0; el.style.transform = 'translateY(30px) scale(0.96)';
+    el.classList.remove('visible');
+  });
+ 
+  for (let i = 0; i < cards.length; i++) {
+    await delay(i * 180 + 200);
+    const el = document.getElementById(cards[i]);
+    el.style.transition = 'all 0.6s cubic-bezier(0.16,1,0.3,1)';
+    el.style.opacity = 1;
+    el.style.transform = 'none';
+    await delay(100);
+    el.classList.add('visible');
+  }
+}
+ 
+async function animSlide4() {
+  const label = document.getElementById('s4-label');
+  const stats = ['stat1','stat2','stat3','stat4'];
+  const quote = document.getElementById('s4-quote');
+ 
+  label.style.opacity = 0; label.style.transform = 'translateY(20px)';
+  stats.forEach(id => { const el = document.getElementById(id); el.style.opacity = 0; el.style.transform = 'translateY(20px)'; });
+  quote.style.opacity = 0;
+ 
+  await delay(200);
+  label.style.transition = 'all 0.5s'; label.style.opacity = 1; label.style.transform = 'none';
+ 
+  for (let i = 0; i < stats.length; i++) {
+    await delay(i * 200 + 400);
+    const el = document.getElementById(stats[i]);
+    el.style.transition = 'all 0.6s cubic-bezier(0.16,1,0.3,1)';
+    el.style.opacity = 1; el.style.transform = 'none';
+    const counter = el.querySelector('.count');
+    if (counter) animateCount(counter, parseInt(counter.dataset.target), 1200);
+  }
+ 
+  await delay(2000);
+  quote.style.transition = 'opacity 0.8s'; quote.style.opacity = 0.5;
+}
+ 
+function animateCount(el, target, duration) {
+  const start = Date.now();
+  function update() {
+    const pct = Math.min((Date.now() - start) / duration, 1);
+    const ease = 1 - Math.pow(1 - pct, 3);
+    el.textContent = Math.round(ease * target);
+    if (pct < 1) requestAnimationFrame(update);
+  }
+  update();
+}
+ 
+async function animSlide5() {
+  const pre = document.getElementById('fin-pre');
+  const title = document.getElementById('fin-title');
+  const tag = document.getElementById('fin-tag');
+  const ieee = document.getElementById('fin-ieee');
+  const btns = document.getElementById('fin-btns');
+ 
+  [pre, title, tag, ieee, btns].forEach(el => { el.style.opacity = 0; el.style.transform = 'translateY(30px)'; });
+ 
+  await delay(200);
+  pre.style.transition = 'all 0.5s'; pre.style.opacity = 1; pre.style.transform = 'none';
+  await delay(400);
+  title.style.transition = 'all 0.8s cubic-bezier(0.16,1,0.3,1)'; title.style.opacity = 1; title.style.transform = 'none';
+  await delay(500);
+  tag.style.transition = 'all 0.6s'; tag.style.opacity = 0.5; tag.style.transform = 'none';
+  await delay(400);
+  ieee.style.transition = 'all 0.6s'; ieee.style.opacity = 1; ieee.style.transform = 'none';
+  await delay(600);
+  btns.style.transition = 'all 0.6s'; btns.style.opacity = 1; btns.style.transform = 'none';
+}
+ 
+// ─── START / REPLAY ───
+function startTrailer() {
+  const intro = document.getElementById('intro');
+  intro.style.transition = 'opacity 0.8s, transform 0.8s';
+  intro.style.opacity = 0;
+  intro.style.transform = 'scale(1.05)';
+  setTimeout(() => {
+    intro.style.display = 'none';
+    document.getElementById('trailer').style.display = 'block';
+    startHUD();
+    totalDuration = 0;
+    goSlide(0);
+  }, 800);
+}
+ 
+function replay() {
+  totalDuration = 0;
+  if (slideTimer) clearTimeout(slideTimer);
+  if (progressTimer) clearInterval(progressTimer);
+  document.getElementById('progress-bar').style.width = '0%';
+  goSlide(0);
+}
+ 
+// keyboard nav
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ') {
+    if (currentSlide >= 0 && currentSlide < SLIDES.length - 1) {
+      totalDuration += DURATIONS[currentSlide];
+      if (slideTimer) clearTimeout(slideTimer);
+      if (progressTimer) clearInterval(progressTimer);
+      goSlide(currentSlide + 1);
+    }
+  }
+  if (e.key === 'ArrowLeft' && currentSlide > 0) {
+    if (slideTimer) clearTimeout(slideTimer);
+    if (progressTimer) clearInterval(progressTimer);
+    totalDuration = DURATIONS.slice(0, currentSlide - 1).reduce((a,b)=>a+b,0);
+    goSlide(currentSlide - 1);
+  }
+  if (e.key === 'Enter' && currentSlide < 0) startTrailer();
+});
+ 
+// ─── GLITCH FLICKER EFFECT ───
+setInterval(() => {
+  if (Math.random() < 0.05) {
+    const trailer = document.getElementById('trailer');
+    if (trailer.style.display !== 'none') {
+      trailer.style.filter = 'brightness(1.3) contrast(1.05)';
+      setTimeout(() => trailer.style.filter = '', 60);
+    }
+  }
+}, 3000);
+</script>
+</body>
+</html>
