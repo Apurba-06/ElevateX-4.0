@@ -31,7 +31,7 @@ This project replaces a traditional MP4 video trailer with a dynamic, browser-na
   - CRT-style scanline overlays and corner-bracket targeting UI.
 - **Advanced CSS Animations:** Utilizes `@keyframes` for glitch text effects, pulsing rings, fluid `clip-path` reveals, and smooth typography fades.
 - **Custom Interactive Cursor:** Replaces the default OS cursor with a screen-blended targeting dot and trailing ring for an immersive user feel.
-
+- **AI Tooling:** Google Gemini (used for code generation, logic refinement, and debugging).
 ## 🗂 Project Structure
 Because this is a highly optimized, single-load experience, the core logic is contained within a unified structure:
 
