@@ -17,10 +17,6 @@ An immersive, cinematic DOM-based web experience built for **ElevateX 4.0**, the
 - [About the Project](#-about-the-project)
 - [Key Features](#-key-features)
 - [Project Structure](#-project-structure)
-- [Installation & Quick Start](#-installation--quick-start)
-- [Navigation Controls](#-navigation-controls)
-- [Technical Architecture](#-technical-architecture)
-- [Team & Acknowledgments](#-team--acknowledgments)
 
 ---
 
@@ -43,4 +39,3 @@ Because this is a highly optimized, single-load experience, the core logic is co
 elevatex-trailer/
 ├── index.html        # Core structure, CSS styles, and JS logic
 ├── README.md         # Project documentation
-└── assets/           # (Optional) Directory for any external favicons or future assets
