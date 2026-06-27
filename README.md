@@ -9,7 +9,7 @@
 
 An immersive, cinematic DOM-based web experience built for **ElevateX 4.0**, the ultimate mentoring summit presented by IEEE JUSB. 
 
-[Explore the Live Demo](https://your-demo-link-here.com) </div>
+[Explore the Live Demo]((https://elevate-x-4-0.vercel.app/)) </div>
 
 ---
 
